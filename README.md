@@ -1,7 +1,7 @@
 # PGM Editor
 
 [![Version](https://img.shields.io/badge/version-0.0.1-green)](https://github.com/adityakamath/pgm_editor)
-[![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue)](LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 > **Note**: This extension was vibe-coded with [Claude](https://claude.ai) for personal use while painting Nav2 keepout/speed zones, and made public in case it's useful to anyone else. Contributions and feedback are welcome!
 
@@ -125,7 +125,9 @@ pgm_editor/
 │   └── pgmIO.ts        # PGM (P5) parser/serializer
 ├── media/
 │   ├── pgmEditor.js    # Webview-side painting/rendering logic
-│   └── pgmEditor.css   # Webview styling
+│   ├── pgmEditor.css   # Webview styling
+│   ├── codicon.css     # Vendored from @vscode/codicons (devDependency) - toolbar icons
+│   └── codicon.ttf     # Vendored from @vscode/codicons (devDependency) - icon font
 ├── package.json        # Extension manifest
 ├── tsconfig.json        # TypeScript config
 └── README.md            # This file
@@ -158,10 +160,4 @@ See [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ## License
 
-Dual-licensed under MIT OR Apache-2.0. See [LICENSE-MIT](LICENSE-MIT) and
-[LICENSE-APACHE](LICENSE-APACHE) for details.
-
----
-
-**Made with care by [@adityakamath](https://github.com/adityakamath) (and
-[Claude](https://claude.ai)) - feedback and contributions are welcome!**
+MIT licensed. See [LICENSE](LICENSE) for details.

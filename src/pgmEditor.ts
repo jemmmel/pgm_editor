@@ -407,8 +407,8 @@ export class PgmEditorProvider implements vscode.CustomEditorProvider<PgmDocumen
             vscode.Uri.joinPath(this.context.extensionUri, 'media', 'pgmEditor.js'));
         const styleUri = webview.asWebviewUri(
             vscode.Uri.joinPath(this.context.extensionUri, 'media', 'pgmEditor.css'));
-        const codiconUri = webview.asWebviewUri(vscode.Uri.joinPath(
-            this.context.extensionUri, 'node_modules', '@vscode', 'codicons', 'dist', 'codicon.css'));
+        const codiconUri = webview.asWebviewUri(
+            vscode.Uri.joinPath(this.context.extensionUri, 'media', 'codicon.css'));
 
         return /* html */ `<!DOCTYPE html>
 <html lang="en">
