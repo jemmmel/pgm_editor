@@ -44,7 +44,7 @@ git clone https://github.com/adityakamath/pgm_editor.git
 cd pgm_editor
 npm install
 npm run compile
-ln -s "$(pwd)" ~/.vscode-server/extensions/local.pgm-editor-0.0.1
+ln -s "$(pwd)" ~/.vscode-server/extensions/kamathsblog.pgm-editor-0.0.1
 ```
 
 (Use `~/.vscode/extensions` instead of `~/.vscode-server/extensions` if

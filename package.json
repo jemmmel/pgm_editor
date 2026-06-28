@@ -3,7 +3,7 @@
   "displayName": "PGM Editor",
   "description": "Paint directly on PGM (P5 grayscale) images, like Nav2 costmap filter masks.",
   "version": "0.0.1",
-  "publisher": "local",
+  "publisher": "kamathsblog",
   "engines": {
     "vscode": "^1.85.0"
   },
