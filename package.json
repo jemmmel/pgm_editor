@@ -1,0 +1,57 @@
+{
+  "name": "pgm-editor",
+  "displayName": "PGM Editor",
+  "description": "Paint directly on PGM (P5 grayscale) images, like Nav2 costmap filter masks.",
+  "version": "0.0.1",
+  "publisher": "local",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Other"],
+  "keywords": [
+    "pgm",
+    "pixel editor",
+    "image editor",
+    "nav2",
+    "costmap",
+    "keepout",
+    "speed filter",
+    "robotics"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/adityakamath/pgm_editor"
+  },
+  "bugs": {
+    "url": "https://github.com/adityakamath/pgm_editor/issues"
+  },
+  "homepage": "https://github.com/adityakamath/pgm_editor#readme",
+  "license": "MIT OR Apache-2.0",
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "customEditors": [
+      {
+        "viewType": "pgmEditor.editor",
+        "displayName": "PGM Editor",
+        "selector": [
+          { "filenamePattern": "*.pgm" }
+        ],
+        "priority": "default"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.4.0"
+  },
+  "dependencies": {
+    "@vscode/codicons": "^0.0.45"
+  }
+}
