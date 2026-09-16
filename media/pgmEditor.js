@@ -160,41 +160,43 @@
         }
         offCtx.putImageData(imageData, 0, 0);
 
-        canvas.width = state.width * zoom;
-        canvas.height = state.height * zoom;
+        canvas.width = state.width;
+        canvas.height = state.height;
+        canvas.style.width = `${state.width * zoom}px`;
+        canvas.style.height = `${state.height * zoom}px`;
         ctx.imageSmoothingEnabled = false;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(offscreen, 0, 0, canvas.width, canvas.height);
+        ctx.drawImage(offscreen, 0, 0);
 
         if (overlay && overlay.type === 'rect') {
-            const x = Math.min(overlay.x0, overlay.x1) * zoom;
-            const y = Math.min(overlay.y0, overlay.y1) * zoom;
-            const w = Math.abs(overlay.x1 - overlay.x0) * zoom;
-            const h = Math.abs(overlay.y1 - overlay.y0) * zoom;
+            const x = Math.min(overlay.x0, overlay.x1);
+            const y = Math.min(overlay.y0, overlay.y1);
+            const w = Math.abs(overlay.x1 - overlay.x0);
+            const h = Math.abs(overlay.y1 - overlay.y0);
             ctx.strokeStyle = '#ff4040';
-            ctx.lineWidth = 1;
+            ctx.lineWidth = 1 / zoom;
             ctx.strokeRect(x + 0.5, y + 0.5, w, h);
         } else if (overlay && overlay.type === 'line') {
             ctx.strokeStyle = '#ff4040';
-            ctx.lineWidth = 1;
+            ctx.lineWidth = 1 / zoom;
             ctx.beginPath();
-            ctx.moveTo(overlay.x0 * zoom, overlay.y0 * zoom);
-            ctx.lineTo(overlay.x1 * zoom, overlay.y1 * zoom);
+            ctx.moveTo(overlay.x0, overlay.y0);
+            ctx.lineTo(overlay.x1, overlay.y1);
             ctx.stroke();
         } else if (overlay && overlay.type === 'polygon') {
             ctx.strokeStyle = '#ff4040';
             ctx.fillStyle = '#ff4040';
-            ctx.lineWidth = 1;
+            ctx.lineWidth = 1 / zoom;
             ctx.beginPath();
             overlay.points.forEach((p, i) => {
-                const px = p.x * zoom, py = p.y * zoom;
+                const px = p.x, py = p.y;
                 if (i === 0) { ctx.moveTo(px, py); } else { ctx.lineTo(px, py); }
             });
-            if (overlay.cursor) { ctx.lineTo(overlay.cursor.x * zoom, overlay.cursor.y * zoom); }
+            if (overlay.cursor) { ctx.lineTo(overlay.cursor.x, overlay.cursor.y); }
             ctx.stroke();
             for (const p of overlay.points) {
                 ctx.beginPath();
-                ctx.arc(p.x * zoom, p.y * zoom, 3, 0, Math.PI * 2);
+                ctx.arc(p.x, p.y, 3 / zoom, 0, Math.PI * 2);
                 ctx.fill();
             }
         }

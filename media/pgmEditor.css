@@ -5,6 +5,10 @@ body {
     color: var(--vscode-editor-foreground);
     font-family: var(--vscode-font-family);
     font-size: 12px;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 .toolbar {
@@ -22,6 +26,7 @@ body {
     top: 0;
     background: var(--vscode-editor-background);
     z-index: 1;
+    flex: 0 0 auto;
 }
 
 .toolbar::-webkit-scrollbar {
@@ -202,8 +207,11 @@ input[type="range"].slider-speed::-webkit-slider-runnable-track {
 .canvas-wrap {
     display: flex;
     justify-content: flex-start;
+    flex: 1 1 auto;
+    min-height: 0;
     padding: 10px;
     overflow: auto;
+    overscroll-behavior: contain;
 }
 
 #canvas {
