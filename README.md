@@ -76,6 +76,9 @@ using the debugger but otherwise more friction than the install above.
   and Speed % controls without changing the image.
 - **Overlay**: when enabled, painting only affects pixels lighter than the
   selected grayscale value; darker pixels are left unchanged.
+- **Select / Move**: click and drag a completed shape to move it. Each brush
+  stroke and line is kept as one movable shape, with the move recorded as one
+  undoable operation.
 
 **Color**:
 

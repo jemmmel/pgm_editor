@@ -39,6 +39,9 @@
     let rectStart = null;        // rectangle tool: drag start
     let polygonPoints = [];      // polygon tool: vertices placed so far
     let polygonCursor = null;    // polygon tool: current mouse position, for the live preview edge
+    let selectedEditIndex = -1;  // select tool: edit currently being moved
+    let moveStart = null;
+    let moveOriginal = null;
 
     function currentTool() { return toolSelect.value; }
     toolSelect.addEventListener('change', updateToolUI);
@@ -132,6 +135,53 @@
     function computePixels() {
         const pixels = state.original.slice();
         for (const edit of state.edits) { applyEdit(pixels, state.width, state.height, edit); }
+        return pixels;
+    }
+
+    function translateEdit(edit, dx, dy) {
+        if (edit.type === 'rect') {
+            return { ...edit, x0: edit.x0 + dx, y0: edit.y0 + dy, x1: edit.x1 + dx, y1: edit.y1 + dy };
+        }
+        return { ...edit, points: edit.points.map((point) => ({ x: point.x + dx, y: point.y + dy })) };
+    }
+
+    function pointInPolygon(point, points) {
+        let inside = false;
+        for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
+            const a = points[i], b = points[j];
+            if ((a.y > point.y) !== (b.y > point.y) &&
+                point.x < ((b.x - a.x) * (point.y - a.y)) / (b.y - a.y) + a.x) {
+                inside = !inside;
+            }
+        }
+        return inside;
+    }
+
+    function editContainsPoint(edit, point) {
+        if (edit.type === 'rect') {
+            return point.x >= Math.min(edit.x0, edit.x1) && point.x <= Math.max(edit.x0, edit.x1) &&
+                point.y >= Math.min(edit.y0, edit.y1) && point.y <= Math.max(edit.y0, edit.y1);
+        }
+        if (edit.type === 'polygon') { return pointInPolygon(point, edit.points); }
+        const radius = edit.thickness / 2;
+        return edit.points.some((center) => {
+            const dx = point.x - center.x, dy = point.y - center.y;
+            return dx * dx + dy * dy <= radius * radius;
+        });
+    }
+
+    function findEditAtPoint(point) {
+        for (let i = state.edits.length - 1; i >= 0; i--) {
+            if (editContainsPoint(state.edits[i], point)) { return i; }
+        }
+        return -1;
+    }
+
+    function computePixelsWithMovedEdit(index, movedEdit) {
+        const pixels = state.original.slice();
+        state.edits.forEach((edit, editIndex) => {
+            applyEdit(pixels, state.width, state.height, editIndex === index ? movedEdit : edit);
+        });
         return pixels;
     }
 
@@ -236,6 +286,11 @@
     function updateToolUI() {
         const tool = currentTool();
         thicknessWrap.style.display = (tool === 'brush' || tool === 'eraser' || tool === 'line') ? '' : 'none';
+        if (tool !== 'select') {
+            selectedEditIndex = -1;
+            moveStart = null;
+            moveOriginal = null;
+        }
         // Switching tools mid-polygon abandons it rather than leaving an orphaned partial shape.
         if (tool !== 'polygon' && polygonPoints.length) {
             polygonPoints = [];
@@ -249,6 +304,17 @@
         if (!state) { return; }
         const tool = currentTool();
         const point = canvasToImageCoords(evt);
+
+        if (tool === 'select') {
+            selectedEditIndex = findEditAtPoint(point);
+            if (selectedEditIndex >= 0) {
+                moveStart = point;
+                moveOriginal = state.edits[selectedEditIndex];
+                livePixels = computePixels();
+                render(livePixels);
+            }
+            return;
+        }
 
         if (tool === 'eyedropper') {
             samplePixel(point);
@@ -288,6 +354,13 @@
     canvas.addEventListener('mousemove', (evt) => {
         if (!state) { return; }
         const point = canvasToImageCoords(evt);
+
+        if (moveStart && moveOriginal && selectedEditIndex >= 0) {
+            const dx = point.x - moveStart.x;
+            const dy = point.y - moveStart.y;
+            render(computePixelsWithMovedEdit(selectedEditIndex, translateEdit(moveOriginal, dx, dy)));
+            return;
+        }
 
         if (currentTool() === 'polygon' && polygonPoints.length) {
             polygonCursor = point;
@@ -346,6 +419,21 @@
         rerenderFromEdits();
     }
 
+    function finishMove(point) {
+        if (!moveStart || !moveOriginal || selectedEditIndex < 0) { return; }
+        const dx = point.x - moveStart.x;
+        const dy = point.y - moveStart.y;
+        if (dx !== 0 || dy !== 0) {
+            vscode.postMessage({ type: 'move', index: selectedEditIndex, dx, dy });
+            state.edits = state.edits.map((edit, index) =>
+                index === selectedEditIndex ? translateEdit(edit, dx, dy) : edit);
+        }
+        selectedEditIndex = -1;
+        moveStart = null;
+        moveOriginal = null;
+        rerenderFromEdits();
+    }
+
     function closePolygon() {
         if (polygonPoints.length < 3) {
             polygonPoints = [];
@@ -371,6 +459,7 @@
     window.addEventListener('mouseup', (evt) => {
         if (!state) { return; }
         const point = canvasToImageCoords(evt);
+        if (moveStart) { finishMove(point); return; }
         if (rectStart) { finishRect(point); return; }
         if (lineStart) { finishLine(point); return; }
         finishStroke();

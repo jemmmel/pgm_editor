@@ -11,6 +11,7 @@ All notable changes to the "PGM Editor" extension will be documented in this fil
 - **Polygon, Line, Rectangle, Brush, Eraser, Eye Dropper** tools - polygon and rectangle auto-fill; eye dropper samples a pixel's grayscale value
 - **Gray % / Speed % sliders**, bidirectionally linked using Nav2's `speed_mask.pgm` scale formula
 - **Overlay mode** checkbox - painting only replaces lighter pixels, preserving darker shades
+- **Select / Move** tool - moves completed strokes, lines, rectangles, and polygons as whole shapes
 - **Map reference overlay** - auto-detects and faintly shows the real map under a `filters/*.pgm` mask
 - **Zoom** up to 16x with nearest-neighbor scaling
 - **Undo / redo** via Ctrl+Z / Ctrl+Y (Cmd+Z / Cmd+Y on Mac), a whole shape at a time

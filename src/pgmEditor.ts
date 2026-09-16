@@ -30,6 +30,13 @@ interface PolygonEdit {
 
 type Edit = StrokeEdit | RectEdit | PolygonEdit;
 
+function translateEdit(edit: Edit, dx: number, dy: number): Edit {
+    if (edit.type === 'rect') {
+        return { ...edit, x0: edit.x0 + dx, y0: edit.y0 + dy, x1: edit.x1 + dx, y1: edit.y1 + dy };
+    }
+    return { ...edit, points: edit.points.map((point) => ({ x: point.x + dx, y: point.y + dy })) };
+}
+
 /** Standard scanline fill, even-odd rule. Samples at pixel centers (y+0.5) to avoid the classic
  * double-crossing bug when an edge passes exactly through an integer scanline. */
 function fillPolygon(pixels: Uint8Array, width: number, height: number, edit: PolygonEdit): void {
@@ -253,6 +260,32 @@ class PgmDocument implements vscode.CustomDocument {
         this._onDidChangeDocument.fire({ content: this._edits });
     }
 
+    moveEdit(index: number, dx: number, dy: number): void {
+        const edit = this._edits[index];
+        if (!edit || (dx === 0 && dy === 0)) {
+            return;
+        }
+        const editsBeforeThis = this._edits;
+        const movedEdit = translateEdit(edit, dx, dy);
+        const editsAfterThis = this._edits.map((candidate, candidateIndex) =>
+            candidateIndex === index ? movedEdit : candidate);
+        this._edits = editsAfterThis;
+
+        this._onDidChangeForEditing.fire({
+            document: this,
+            label: 'Move shape',
+            undo: async () => {
+                this._edits = editsBeforeThis;
+                this._onDidChangeDocument.fire({ content: this._edits });
+            },
+            redo: async () => {
+                this._edits = editsAfterThis;
+                this._onDidChangeDocument.fire({ content: this._edits });
+            },
+        });
+        this._onDidChangeDocument.fire({ content: this._edits });
+    }
+
     async save(cancellation: vscode.CancellationToken): Promise<void> {
         await this.saveAs(this._uri, cancellation);
         this._savedEditCount = this._edits.length;
@@ -388,6 +421,9 @@ export class PgmEditorProvider implements vscode.CustomEditorProvider<PgmDocumen
                         points: message.points,
                     });
                     break;
+                case 'move':
+                    document.moveEdit(message.index, message.dx, message.dy);
+                    break;
                 case 'undo':
                     vscode.commands.executeCommand('undo');
                     break;
@@ -447,6 +483,7 @@ export class PgmEditorProvider implements vscode.CustomEditorProvider<PgmDocumen
                 <option value="rect">Rectangle</option>
                 <option value="brush">Brush</option>
                 <option value="eraser">Eraser</option>
+                <option value="select">Select / Move</option>
                 <option value="eyedropper">Eye Dropper</option>
             </select>
         </span>
