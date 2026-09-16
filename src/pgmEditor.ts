@@ -5,6 +5,7 @@ interface StrokeEdit {
     type: 'stroke';
     grayValue: number;
     thickness: number;
+    overlay: boolean;
     /** Stamp centers, already densely sampled by the webview - no interpolation needed here. */
     points: { x: number; y: number }[];
 }
@@ -12,6 +13,7 @@ interface StrokeEdit {
 interface RectEdit {
     type: 'rect';
     grayValue: number;
+    overlay: boolean;
     x0: number;
     y0: number;
     x1: number;
@@ -21,6 +23,7 @@ interface RectEdit {
 interface PolygonEdit {
     type: 'polygon';
     grayValue: number;
+    overlay: boolean;
     /** Vertices in order; the closing edge (last -> first) is implicit. */
     points: { x: number; y: number }[];
 }
@@ -53,7 +56,10 @@ function fillPolygon(pixels: Uint8Array, width: number, height: number, edit: Po
             const xStart = Math.max(0, Math.round(xs[i]));
             const xEnd = Math.min(width - 1, Math.round(xs[i + 1]));
             for (let x = xStart; x <= xEnd; x++) {
-                pixels[y * width + x] = edit.grayValue;
+                const index = y * width + x;
+                if (!edit.overlay || pixels[index] > edit.grayValue) {
+                    pixels[index] = edit.grayValue;
+                }
             }
         }
     }
@@ -73,7 +79,10 @@ function applyEdit(pixels: Uint8Array, width: number, height: number, edit: Edit
         const maxY = Math.min(height - 1, Math.ceil(Math.max(edit.y0, edit.y1)));
         for (let y = minY; y <= maxY; y++) {
             for (let x = minX; x <= maxX; x++) {
-                pixels[y * width + x] = edit.grayValue;
+                const index = y * width + x;
+                if (!edit.overlay || pixels[index] > edit.grayValue) {
+                    pixels[index] = edit.grayValue;
+                }
             }
         }
         return;
@@ -90,8 +99,9 @@ function applyEdit(pixels: Uint8Array, width: number, height: number, edit: Edit
             for (let x = minX; x <= maxX; x++) {
                 const dx = x - cx;
                 const dy = y - cy;
-                if (dx * dx + dy * dy <= r2) {
-                    pixels[y * width + x] = edit.grayValue;
+                const index = y * width + x;
+                if (dx * dx + dy * dy <= r2 && (!edit.overlay || pixels[index] > edit.grayValue)) {
+                    pixels[index] = edit.grayValue;
                 }
             }
         }
@@ -333,6 +343,9 @@ export class PgmEditorProvider implements vscode.CustomEditorProvider<PgmDocumen
 
         panel.webview.onDidReceiveMessage((message) => {
             switch (message.type) {
+                case 'save':
+                    void vscode.commands.executeCommand('workbench.action.files.save');
+                    break;
                 case 'ready':
                     panel.webview.postMessage({
                         type: 'init',
@@ -352,6 +365,7 @@ export class PgmEditorProvider implements vscode.CustomEditorProvider<PgmDocumen
                         type: 'stroke',
                         grayValue: message.grayValue,
                         thickness: message.thickness,
+                        overlay: message.overlay === true,
                         points: message.points,
                     });
                     break;
@@ -359,6 +373,7 @@ export class PgmEditorProvider implements vscode.CustomEditorProvider<PgmDocumen
                     document.addEdit({
                         type: 'rect',
                         grayValue: message.grayValue,
+                        overlay: message.overlay === true,
                         x0: message.x0,
                         y0: message.y0,
                         x1: message.x1,
@@ -369,6 +384,7 @@ export class PgmEditorProvider implements vscode.CustomEditorProvider<PgmDocumen
                     document.addEdit({
                         type: 'polygon',
                         grayValue: message.grayValue,
+                        overlay: message.overlay === true,
                         points: message.points,
                     });
                     break;
@@ -421,6 +437,9 @@ export class PgmEditorProvider implements vscode.CustomEditorProvider<PgmDocumen
 </head>
 <body>
     <div class="toolbar">
+        <button id="saveButton" class="icon-button" type="button" title="Save PGM (Ctrl+S)" aria-label="Save PGM">
+            <i class="codicon codicon-save" aria-hidden="true"></i>
+        </button>
         <span class="select-wrap">
             <select id="tool" class="tool-select">
                 <option value="polygon" title="Click to add points · double-click or Enter to close &amp; fill · Escape to cancel">Polygon</option>
@@ -428,6 +447,7 @@ export class PgmEditorProvider implements vscode.CustomEditorProvider<PgmDocumen
                 <option value="rect">Rectangle</option>
                 <option value="brush">Brush</option>
                 <option value="eraser">Eraser</option>
+                <option value="eyedropper">Eye Dropper</option>
             </select>
         </span>
 
@@ -456,8 +476,12 @@ export class PgmEditorProvider implements vscode.CustomEditorProvider<PgmDocumen
         <div class="zone">
             <label title="Zoom">
                 <i class="codicon codicon-zoom-in" aria-hidden="true"></i>
-                <input id="zoomLevel" type="range" min="1" max="16" value="4" class="slider" aria-label="Zoom level">
+                <input id="zoomLevel" type="range" min="1" max="16" step="0.5" value="4" class="slider" aria-label="Zoom level">
                 <span id="zoomLabel" class="value">4x</span>
+            </label>
+            <label title="Only paint pixels lighter than the selected grayscale value">
+                <input id="overlayMode" type="checkbox">
+                Overlay
             </label>
             <span id="referenceToggleWrap" style="display:none">
                 <label><input id="referenceToggle" type="checkbox" checked>

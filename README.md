@@ -12,7 +12,7 @@ grayscale) PGM images - no PNG round-trip needed. Built for editing
 
 ## Features
 
-🔺 **Polygon, Line, Rectangle, Brush, Eraser** - closed shapes (polygon)
+🔺 **Polygon, Line, Rectangle, Brush, Eraser, Eye Dropper** - closed shapes (polygon)
 auto-fill, everything else paints at the chosen thickness
 
 🎨 **Gray % / Speed % sliders** - bidirectionally linked, with the actual
@@ -72,6 +72,10 @@ using the debugger but otherwise more friction than the install above.
 - **Eraser**: same as Brush, but always paints white (255) regardless of the
   Gray % slider - for fixing mistakes without flipping the slider back and
   forth.
+- **Eye Dropper**: click any pixel to load its grayscale value into the Gray %
+  and Speed % controls without changing the image.
+- **Overlay**: when enabled, painting only affects pixels lighter than the
+  selected grayscale value; darker pixels are left unchanged.
 
 **Color**:
 
@@ -92,16 +96,17 @@ using the debugger but otherwise more friction than the install above.
 - **Thickness**: stamp/line width in pixels (Brush, Eraser, Line only -
   hidden for Polygon/Rectangle, which fill solid).
 - **Zoom**: masks are usually small (a few hundred pixels per side) - zoom in
-  to paint precisely.
+  to paint precisely. Hold Ctrl and scroll over the canvas to zoom in or out.
 - **Map reference**: if the file you're editing is
   `maps/<name>/filters/<mask>.pgm`, the sibling `maps/<name>/map.pgm` is
   loaded automatically and shown faintly underneath unpainted (white) areas,
   so you can see walls/furniture while deciding where to paint. Adjustable
   opacity. Only appears when a same-size reference map is actually found.
   Display-only - never written to the saved file.
-- **Undo / Redo**: Ctrl+Z / Ctrl+Y (Cmd+Z / Cmd+Y on Mac) - no toolbar
-  buttons, undo/redo work a whole shape at a time. Ctrl+S saves back to the
-  same `.pgm` file.
+- **Save**: click the toolbar save button or press Ctrl+S (Cmd+S on Mac) to
+  write back to the same `.pgm` file.
+- **Undo / Redo**: Ctrl+Z / Ctrl+Y (Cmd+Z / Cmd+Y on Mac) - undo/redo work a
+  whole shape at a time.
 
 ## Notes
 

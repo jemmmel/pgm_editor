@@ -7,6 +7,7 @@
     const ctx = canvas.getContext('2d');
 
     const toolSelect = document.getElementById('tool');
+    const saveButton = document.getElementById('saveButton');
     const colorSwatch = document.getElementById('colorSwatch');
     const grayValueInput = document.getElementById('grayValue');
     const grayValueLabel = document.getElementById('grayValueLabel');
@@ -20,6 +21,8 @@
     const referenceToggleWrap = document.getElementById('referenceToggleWrap');
     const referenceToggle = document.getElementById('referenceToggle');
     const referenceOpacity = document.getElementById('referenceOpacity');
+    const canvasWrap = document.querySelector('.canvas-wrap');
+    const overlayMode = document.getElementById('overlayMode');
 
     /** @type {{width:number,height:number,maxval:number,original:Uint8ClampedArray,edits:any[],reference:{width:number,height:number,pixels:Uint8ClampedArray}|null}} */
     let state = null;
@@ -39,6 +42,7 @@
 
     function currentTool() { return toolSelect.value; }
     toolSelect.addEventListener('change', updateToolUI);
+    saveButton.addEventListener('click', () => vscode.postMessage({ type: 'save' }));
 
     // --- gray % <-> speed % linkage -------------------------------------------------------
     // speed_limit_% = (pixel_value / 255) * 100, for this project's speed_mask config
@@ -81,7 +85,10 @@
             for (let i = 0; i + 1 < xs.length; i += 2) {
                 const xStart = Math.max(0, Math.round(xs[i]));
                 const xEnd = Math.min(width - 1, Math.round(xs[i + 1]));
-                for (let x = xStart; x <= xEnd; x++) { pixels[y * width + x] = edit.grayValue; }
+                for (let x = xStart; x <= xEnd; x++) {
+                    const index = y * width + x;
+                    if (!edit.overlay || pixels[index] > edit.grayValue) { pixels[index] = edit.grayValue; }
+                }
             }
         }
     }
@@ -95,7 +102,10 @@
             const minY = Math.max(0, Math.floor(Math.min(edit.y0, edit.y1)));
             const maxY = Math.min(height - 1, Math.ceil(Math.max(edit.y0, edit.y1)));
             for (let y = minY; y <= maxY; y++) {
-                for (let x = minX; x <= maxX; x++) { pixels[y * width + x] = edit.grayValue; }
+                for (let x = minX; x <= maxX; x++) {
+                    const index = y * width + x;
+                    if (!edit.overlay || pixels[index] > edit.grayValue) { pixels[index] = edit.grayValue; }
+                }
             }
             return;
         }
@@ -110,7 +120,10 @@
             for (let y = minY; y <= maxY; y++) {
                 for (let x = minX; x <= maxX; x++) {
                     const dx = x - cx, dy = y - cy;
-                    if (dx * dx + dy * dy <= r2) { pixels[y * width + x] = edit.grayValue; }
+                    const index = y * width + x;
+                    if (dx * dx + dy * dy <= r2 && (!edit.overlay || pixels[index] > edit.grayValue)) {
+                        pixels[index] = edit.grayValue;
+                    }
                 }
             }
         }
@@ -199,6 +212,13 @@
         return { x, y };
     }
 
+    function samplePixel(point) {
+        const x = Math.max(0, Math.min(state.width - 1, Math.floor(point.x)));
+        const y = Math.max(0, Math.min(state.height - 1, Math.floor(point.y)));
+        const pixels = computePixels();
+        setPct(Math.round((pixels[y * state.width + x] / 255) * 100));
+    }
+
     function addPointWithInterpolation(points, from, to, thickness) {
         if (!from) { points.push(to); return; }
         const dx = to.x - from.x, dy = to.y - from.y;
@@ -228,6 +248,11 @@
         const tool = currentTool();
         const point = canvasToImageCoords(evt);
 
+        if (tool === 'eyedropper') {
+            samplePixel(point);
+            return;
+        }
+
         if (tool === 'polygon') {
             polygonPoints.push(point);
             render(livePixels ?? computePixels(), { type: 'polygon', points: polygonPoints, cursor: point });
@@ -251,7 +276,7 @@
         // brush / eraser
         const grayValue = tool === 'eraser' ? 255 : currentGrayValue();
         const thickness = Number(thicknessInput.value);
-        currentStroke = { type: 'stroke', grayValue, thickness, points: [point] };
+        currentStroke = { type: 'stroke', grayValue, thickness, overlay: overlayMode.checked, points: [point] };
         lastPoint = point;
         livePixels = computePixels();
         applyEdit(livePixels, state.width, state.height, currentStroke);
@@ -282,6 +307,7 @@
             type: 'stroke',
             grayValue: currentStroke.grayValue,
             thickness: currentStroke.thickness,
+            overlay: currentStroke.overlay,
             points: currentStroke.points.slice(-8), // only the newest segment needs re-stamping
         });
         render(livePixels);
@@ -297,7 +323,7 @@
 
     function finishRect(point) {
         if (!rectStart) { return; }
-        const edit = { type: 'rect', grayValue: currentGrayValue(),
+        const edit = { type: 'rect', grayValue: currentGrayValue(), overlay: overlayMode.checked,
             x0: rectStart.x, y0: rectStart.y, x1: point.x, y1: point.y };
         vscode.postMessage({ type: 'rect', ...edit });
         state.edits = [...state.edits, edit];
@@ -310,7 +336,8 @@
         const thickness = Number(thicknessInput.value);
         const points = [];
         addPointWithInterpolation(points, lineStart, point, thickness);
-        const edit = { type: 'stroke', grayValue: currentGrayValue(), thickness, points };
+        const edit = { type: 'stroke', grayValue: currentGrayValue(), thickness,
+            overlay: overlayMode.checked, points };
         vscode.postMessage({ type: 'stroke', ...edit });
         state.edits = [...state.edits, edit];
         lineStart = null;
@@ -324,7 +351,8 @@
             if (state) { rerenderFromEdits(); }
             return;
         }
-        const edit = { type: 'polygon', grayValue: currentGrayValue(), points: polygonPoints };
+        const edit = { type: 'polygon', grayValue: currentGrayValue(), overlay: overlayMode.checked,
+            points: polygonPoints };
         vscode.postMessage({ type: 'polygon', ...edit });
         state.edits = [...state.edits, edit];
         polygonPoints = [];
@@ -385,6 +413,23 @@
         zoomLabel.textContent = `${zoom}x`;
         if (state) { rerenderFromEdits(); }
     });
+    canvasWrap.addEventListener('wheel', (evt) => {
+        if (!evt.ctrlKey || !state) { return; }
+        evt.preventDefault();
+        evt.stopPropagation();
+        const canvasRect = canvas.getBoundingClientRect();
+        const wrapRect = canvasWrap.getBoundingClientRect();
+        const imageX = ((evt.clientX - canvasRect.left) / canvasRect.width) * state.width;
+        const imageY = ((evt.clientY - canvasRect.top) / canvasRect.height) * state.height;
+        const canvasOffsetX = canvasRect.left - wrapRect.left + canvasWrap.scrollLeft;
+        const canvasOffsetY = canvasRect.top - wrapRect.top + canvasWrap.scrollTop;
+        const nextZoom = Math.max(1, Math.min(16, zoom + (evt.deltaY < 0 ? 0.5 : -0.5)));
+        if (nextZoom === zoom) { return; }
+        zoomInput.value = String(nextZoom);
+        zoomInput.dispatchEvent(new Event('input'));
+        canvasWrap.scrollLeft = canvasOffsetX + imageX * nextZoom - (evt.clientX - wrapRect.left);
+        canvasWrap.scrollTop = canvasOffsetY + imageY * nextZoom - (evt.clientY - wrapRect.top);
+    }, { passive: false });
     referenceToggle.addEventListener('change', () => { if (state) { rerenderFromEdits(); } });
     referenceOpacity.addEventListener('input', () => { if (state) { rerenderFromEdits(); } });
 
